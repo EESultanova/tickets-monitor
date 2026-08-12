@@ -1,5 +1,9 @@
 {
-  "observation": null,
-  "observed_at": null,
+  "observation": {
+    "status": "sold_out",
+    "raw_status": "Мест нет",
+    "places": null
+  },
+  "observed_at": "2026-08-12T15:38:07.510303+03:00",
   "last_heartbeat_slot": null
 }
