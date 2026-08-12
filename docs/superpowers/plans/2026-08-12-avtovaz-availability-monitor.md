@@ -338,10 +338,10 @@ Run:
 python3 -m unittest discover -s tests -v
 python3 -m py_compile monitor/*.py run_monitor.py
 git diff --check
-grep -R "8601971459:" --exclude-dir=.git .
+git grep -nE 'api.telegram.org/bot[0-9]+:'
 ```
 
-Expected: tests and compilation pass; `git diff --check` is silent; the compromised token scan returns no matches.
+Expected: tests and compilation pass; `git diff --check` is silent; the token-bearing URL scan returns no matches.
 
 - [ ] **Step 5: Perform a live dry fetch without Telegram**
 
