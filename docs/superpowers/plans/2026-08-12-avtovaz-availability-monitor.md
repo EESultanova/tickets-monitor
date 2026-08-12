@@ -175,7 +175,7 @@ Expected: import failure because `monitor.state` does not exist.
 
 - [ ] **Step 3: Implement JSON-safe models and state functions**
 
-Use dataclasses with explicit `to_dict()` and `from_dict()` methods. `observation_changed` compares `(status, places, raw_status)` so a changed place count is announced. `heartbeat_slot` first converts `now` with `ZoneInfo("Europe/Moscow")` and returns only an hour-level key for hours 9 and 21. `save_state` creates the parent directory and writes UTF-8 JSON with `ensure_ascii=False`, two-space indentation, and a trailing newline.
+Use dataclasses with explicit `to_dict()` and `from_dict()` methods. `observation_changed` compares `(status, places)` so a changed place count is announced while cosmetic raw-text changes are ignored. `heartbeat_slot` first converts `now` with `ZoneInfo("Europe/Moscow")` and returns only an hour-level key for hours 9 and 21. `save_state` creates the parent directory and writes UTF-8 JSON with `ensure_ascii=False`, two-space indentation, and a trailing newline.
 
 Initialize `state/status.json` as:
 
@@ -256,11 +256,13 @@ Expected: import failure because `monitor.app` does not exist.
 
 `Config` contains URL, target date, state path, Telegram token, and chat ID. Build messages with these rules:
 
-- `available`: start with `🚨 ПОЯВИЛИСЬ МЕСТА` and include place count when known.
+- transition from `sold_out` to `available`: start with `🚨 ПОЯВИЛИСЬ МЕСТА` and include place count when known.
+- an `available` place-count change: start with `🔔 Количество мест изменилось` and include previous/current values.
+- first observation: use a startup heading rather than claiming a transition.
 - `sold_out`: start with `ℹ️ Статус изменился: мест нет`.
 - `unknown`, `date_missing`, `fetch_error`: start with `⚠️ Монитор требует внимания`.
 - recovery from an error to a normal status: include `✅ Монитор снова работает нормально`.
-- heartbeat: start with `💚 Монитор включён и ожидает смены статуса`.
+- heartbeat after a successful check: start with `💚 Монитор включён и ожидает смены статуса`; error observations must not use the green heading.
 
 All messages include `21.08.2026`, Moscow time, current raw status, and the excursion URL. Send all required messages first; save the new state only after successful sends, so a Telegram failure is retried on the next run. When a status-change message and heartbeat are due in the same run, send one combined message and persist both pieces of state.
 
@@ -338,10 +340,10 @@ Run:
 python3 -m unittest discover -s tests -v
 python3 -m py_compile monitor/*.py run_monitor.py
 git diff --check
-grep -R "8601971459:" --exclude-dir=.git .
+git grep -nE '[0-9]{8,12}:AA[A-Za-z0-9_-]{30,}'
 ```
 
-Expected: tests and compilation pass; `git diff --check` is silent; the compromised token scan returns no matches.
+Expected: tests and compilation pass; `git diff --check` is silent; the Telegram token scan returns no matches.
 
 - [ ] **Step 5: Perform a live dry fetch without Telegram**
 
@@ -349,7 +351,7 @@ Use a short one-off Python command that calls `fetch_page` and `parse_availabili
 
 - [ ] **Step 6: Review the generated files for secret leakage**
 
-Inspect tracked files with `git grep -nE '(TELEGRAM_BOT_TOKEN=|api.telegram.org/bot[0-9]+:)'`. Expected: no literal token assignment or token-bearing URL; references to the environment variable name are allowed.
+Inspect tracked files with `git grep -nE '[0-9]{8,12}:AA[A-Za-z0-9_-]{30,}'`. Expected: no Telegram token value; references to the environment variable name and placeholder assignments are allowed.
 
 - [ ] **Step 7: Commit automation and documentation**
 
