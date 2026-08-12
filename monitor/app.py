@@ -48,11 +48,26 @@ def _observe(config, fetch):
 
 def _status_heading(previous, current):
     # type: (Observation, Observation) -> str
+    if previous is None:
+        if current.status == "available":
+            return "✅ Монитор запущен: места доступны"
+        if current.status == "sold_out":
+            return "🔎 Монитор запущен: мест нет"
+        return "⚠️ Монитор требует внимания"
+
     recovered = previous is not None and previous.status in ERROR_STATUSES
     if current.status == "available":
-        heading = "🚨 ПОЯВИЛИСЬ МЕСТА"
+        if previous.status == "sold_out":
+            heading = "🚨 ПОЯВИЛИСЬ МЕСТА"
+        elif previous.status == "available":
+            heading = "🔔 Количество мест изменилось"
+        else:
+            heading = "🎟 Места доступны"
     elif current.status == "sold_out":
-        heading = "ℹ️ Статус изменился: мест нет"
+        if previous.status == "available":
+            heading = "ℹ️ Места закончились"
+        else:
+            heading = "ℹ️ Статус изменился: мест нет"
     else:
         heading = "⚠️ Монитор требует внимания"
 
@@ -66,7 +81,10 @@ def _build_message(config, previous, current, now, include_change, include_heart
     lines = []
     if include_change:
         lines.append(_status_heading(previous, current))
-    if include_heartbeat:
+        if previous is not None:
+            lines.append("Было: {}".format(previous.raw_status))
+            lines.append("Стало: {}".format(current.raw_status))
+    if include_heartbeat and current.status not in ERROR_STATUSES:
         lines.append("💚 Монитор включён и ожидает смены статуса")
 
     lines.extend(

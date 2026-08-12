@@ -30,11 +30,11 @@ class StateTests(unittest.TestCase):
 
         self.assertTrue(observation_changed(before, after))
 
-    def test_raw_status_change_is_a_change(self):
+    def test_raw_formatting_change_is_not_a_change(self):
         before = Observation("unknown", "Статус не распознан", None)
         after = Observation("unknown", "Изменённая разметка", None)
 
-        self.assertTrue(observation_changed(before, after))
+        self.assertFalse(observation_changed(before, after))
 
     def test_moscow_heartbeat_slots(self):
         morning = datetime(2026, 8, 12, 9, 17, tzinfo=ZoneInfo("Europe/Moscow"))
@@ -69,6 +69,13 @@ class StateTests(unittest.TestCase):
     def test_missing_state_file_returns_empty_state(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "status.json"
+
+            self.assertEqual(load_state(path), MonitorState(None, None, None))
+
+    def test_malformed_state_file_recovers_as_empty_state(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "status.json"
+            path.write_text("{broken json", encoding="utf-8")
 
             self.assertEqual(load_state(path), MonitorState(None, None, None))
 

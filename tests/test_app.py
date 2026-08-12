@@ -74,8 +74,38 @@ class AppTests(unittest.TestCase):
 
         self.assertEqual(result.observation.places, 3)
         self.assertIn("ПОЯВИЛИСЬ МЕСТА", self.sent[0][2])
-        self.assertIn("Осталось 3 места", self.sent[0][2])
+        self.assertIn("Было: Мест нет", self.sent[0][2])
+        self.assertIn("Стало: Осталось 3 места", self.sent[0][2])
         self.assertIn(self.config.url, self.sent[0][2])
+
+    def test_available_count_change_has_count_heading_and_old_new_values(self):
+        self.seed(Observation("available", "Осталось 3 места", 3))
+        html = fixture("available.html").replace("Осталось 3 места", "Осталось 2 места")
+
+        self.run_monitor(html)
+
+        message = self.sent[0][2]
+        self.assertIn("Количество мест изменилось", message)
+        self.assertNotIn("ПОЯВИЛИСЬ МЕСТА", message)
+        self.assertIn("Было: Осталось 3 места", message)
+        self.assertIn("Стало: Осталось 2 места", message)
+
+    def test_first_available_observation_is_startup_status_not_transition(self):
+        self.run_monitor(fixture("available.html"))
+
+        message = self.sent[0][2]
+        self.assertIn("Монитор запущен: места доступны", message)
+        self.assertNotIn("ПОЯВИЛИСЬ МЕСТА", message)
+        self.assertNotIn("Было:", message)
+
+    def test_available_raw_formatting_change_does_not_notify(self):
+        self.seed(Observation("available", "Осталось 3 места", 3))
+        html = fixture("available.html").replace("Осталось", "осталось")
+
+        result = self.run_monitor(html)
+
+        self.assertEqual(result.messages_sent, 0)
+        self.assertEqual(self.sent, [])
 
     def test_heartbeat_sends_once_per_hour_slot(self):
         self.seed(Observation("sold_out", "Мест нет", None))
@@ -115,6 +145,24 @@ class AppTests(unittest.TestCase):
         self.assertEqual(first.messages_sent, 1)
         self.assertEqual(second.messages_sent, 0)
         self.assertIn("требует внимания", self.sent[0][2])
+
+    def test_error_during_heartbeat_slot_does_not_claim_healthy_waiting(self):
+        self.seed(Observation("sold_out", "Мест нет", None))
+
+        def fail(_url):
+            raise TimeoutError("site timed out")
+
+        run_check(
+            self.config,
+            fail,
+            self.send,
+            datetime(2026, 8, 12, 9, 7, tzinfo=MOSCOW),
+        )
+
+        message = self.sent[0][2]
+        self.assertIn("требует внимания", message)
+        self.assertNotIn("💚", message)
+        self.assertNotIn("ожидает смены статуса", message)
 
     def test_recovery_from_error_is_announced(self):
         self.seed(Observation("fetch_error", "Ошибка загрузки: TimeoutError", None))

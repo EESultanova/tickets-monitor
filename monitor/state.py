@@ -17,11 +17,9 @@ def observation_changed(previous, current):
     return (
         previous.status,
         previous.places,
-        previous.raw_status,
     ) != (
         current.status,
         current.places,
-        current.raw_status,
     )
 
 
@@ -37,8 +35,11 @@ def load_state(path):
     # type: (Path) -> MonitorState
     if not path.exists():
         return MonitorState(None, None, None)
-    value = json.loads(path.read_text(encoding="utf-8"))
-    return MonitorState.from_dict(value)
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+        return MonitorState.from_dict(value)
+    except (json.JSONDecodeError, KeyError, TypeError):
+        return MonitorState(None, None, None)
 
 
 def save_state(path, state):
