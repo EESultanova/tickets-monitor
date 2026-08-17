@@ -1,9 +1,9 @@
 {
   "observation": {
-    "status": "sold_out",
-    "raw_status": "Мест нет",
-    "places": null
+    "status": "available",
+    "raw_status": "Осталось 2 места",
+    "places": 2
   },
-  "observed_at": "2026-08-12T15:38:07.510303+03:00",
+  "observed_at": "2026-08-17T11:25:02.019914+03:00",
   "last_heartbeat_slot": "2026-08-17T09"
 }
